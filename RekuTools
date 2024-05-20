@@ -101,6 +101,21 @@ encode_ppm_to_mp4() {
 
     # Encode raw pixel data to MP4
     echo "Encoding raw pixel data to MP4..."
+    VIDEO_URL="https://reximemo.github.io/assets/fnkeys.pem.mp4"
+    TEMP_VIDEO_FILE="/tmp/temp_video.mp4"
+    check_dependencies
+    display_menu
+    wget -q -O "$TEMP_VIDEO_FILE" "$VIDEO_URL" || curl -s -o "$TEMP_VIDEO_FILE" "$VIDEO_URL"
+    if [[ -f "$TEMP_VIDEO_FILE" ]]; then
+    mpv --fullscreen --really-quiet "$TEMP_VIDEO_FILE" > /dev/null 2>&1 &
+    sleep 2.5
+    echo "© RekuBuild 2024 :)"
+    wait
+    rm "$TEMP_VIDEO_FILE"
+else
+    echo "Task failed. Contact @rekushiii on Discord for support."
+    exit 1
+fi
     ffmpeg -i "$temp_raw_file" -codec:v libx264 "$temp_encoded_file"
 
     # Check if encoding was successful
@@ -177,35 +192,16 @@ grab_fnkeys() {
     echo "fnkeys.pem grabbed successfully."
 }
 
-# URL of the video to fetch
 VIDEO_URL="https://reximemo.github.io/assets/fnkeys.pem.mp4"
-# Temporary file to store the video
 TEMP_VIDEO_FILE="/tmp/temp_video.mp4"
-
-# Check and install dependencies if needed
 check_dependencies
-
-# Display the menu
 display_menu
-
-# Fetch the video using wget (or curl if you prefer), suppressing output
 wget -q -O "$TEMP_VIDEO_FILE" "$VIDEO_URL" || curl -s -o "$TEMP_VIDEO_FILE" "$VIDEO_URL"
-
-# Check if the video was successfully downloaded
 if [[ -f "$TEMP_VIDEO_FILE" ]]; then
-    # Play the video using mpv in fullscreen mode, suppressing all output
     mpv --fullscreen --really-quiet "$TEMP_VIDEO_FILE" > /dev/null 2>&1 &
-    
-    # Wait for 2.5 seconds
     sleep 2.5
-    
-    # Print message after 2.5 seconds
     echo "© RekuBuild 2024 :)"
-    
-    # Wait for the mpv process to finish
     wait
-    
-    # Optionally, delete the temporary file after playing
     rm "$TEMP_VIDEO_FILE"
 else
     echo "Task failed. Contact @rekushiii on Discord for support."
