@@ -17,7 +17,7 @@
 <br />
 
 ## Usage
-Set permissions:<br />
+Set permissions so the user can execute:<br />
 ```chmod +x RekuTools```<br />
 <br />
 Prepare the script for dumping fnkeys.pem and run with:<br />
