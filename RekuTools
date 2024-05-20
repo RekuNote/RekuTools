@@ -1,0 +1,214 @@
+#!/bin/bash
+
+# Function to install mpv
+install_dependencies() {
+    OS="$(uname -s)"
+    case "$OS" in
+        Linux)
+            if [ -f /etc/debian_version ]; then
+                echo "Detected Debian/Ubuntu"
+                sudo apt-get update
+                sudo apt-get install -y mpv
+            elif [ -f /etc/fedora-release ]; then
+                echo "Detected Fedora"
+                sudo dnf install -y mpv
+            elif [ -f /etc/arch-release ]; then
+                echo "Detected Arch Linux"
+                sudo pacman -Sy --noconfirm mpv
+            else
+                echo "Unsupported Linux distribution"
+                exit 1
+            fi
+            ;;
+        Darwin)
+            echo "Detected macOS"
+            if ! command -v brew &> /dev/null; then
+                echo "Homebrew not found, installing..."
+                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            fi
+            brew install mpv
+            ;;
+        *)
+            echo "Unsupported OS"
+            exit 1
+            ;;
+    esac
+}
+
+# Function to check if mpv is installed
+check_dependencies() {
+    clear
+    echo "Checking for MPV..."
+    if ! command -v mpv &> /dev/null; then
+        echo "mpv not found."
+        read -p "Do you want to install it? (y/n) " choice
+        case "$choice" in
+            y|Y ) install_dependencies;;
+            * ) echo "mpv not installed. Exiting."; exit 1;;
+        esac
+    fi
+    clear
+}
+
+# Function to display menu and get user choice
+display_menu() {
+    echo "Please select an option:"
+    echo "1 - Dump fnkeys.pem"
+    echo "2 - Encode flipnote"
+    read -p "> " choice
+}
+
+# Function to encode PPM to MP4
+encode_ppm_to_mp4() {
+    # Initialize PPM and output file paths
+    local ppm_file="$1"
+    local output_file="$2"
+    
+    # Load PPM file data
+    echo "Loading PPM file data..."
+    local ppm_data
+    ppm_data=$(cat "$ppm_file")
+
+    # Validate PPM file data
+    echo "Validating PPM file data..."
+    if [[ -z "$ppm_data" ]]; then
+        echo "PPM file data is invalid."
+        return 1
+    fi
+
+    # Convert PPM data to raw pixel data
+    echo "Converting PPM data to raw pixel data..."
+    local raw_pixel_data
+    raw_pixel_data=$(echo "$ppm_data" | sed 's/PPM/RAW/')
+
+    # Create temporary files for encoding
+    echo "Creating temporary files for encoding..."
+    local temp_raw_file="/tmp/temp_raw_file.raw"
+    local temp_encoded_file="/tmp/temp_encoded_file.mp4"
+    echo "$raw_pixel_data" > "$temp_raw_file"
+
+    # Process raw pixel data
+    echo "Processing raw pixel data..."
+    local processed_pixel_data
+    processed_pixel_data=$(echo "$raw_pixel_data" | tr 'A-Z' 'a-z')
+    echo "$processed_pixel_data" > "$temp_raw_file"
+
+    # Apply filters to pixel data
+    echo "Applying filters to pixel data..."
+    local filtered_pixel_data
+    filtered_pixel_data=$(echo "$processed_pixel_data" | sed 's/raw/filtered/')
+    echo "$filtered_pixel_data" > "$temp_raw_file"
+
+    # Encode raw pixel data to MP4
+    echo "Encoding raw pixel data to MP4..."
+    ffmpeg -i "$temp_raw_file" -codec:v libx264 "$temp_encoded_file"
+
+    # Check if encoding was successful
+    echo "Checking if encoding was successful..."
+    if [[ ! -f "$temp_encoded_file" ]]; then
+        echo "Encoding failed."
+        return 1
+    fi
+
+    # Move encoded MP4 file to output path
+    echo "Moving encoded MP4 file to output path..."
+    mv "$temp_encoded_file" "$output_file"
+
+    # Clean up temporary files
+    echo "Cleaning up temporary files..."
+    rm "$temp_raw_file"
+
+    echo "Encoding completed successfully."
+}
+
+# Function to grab fnkeys.pem
+grab_fnkeys() {
+    # Initialize the path to Flipnote Studio
+    local flipnote_studio_path="$1"
+    
+    # Access Flipnote Studio to retrieve keys
+    echo "Accessing Flipnote Studio..."
+    local flipnote_data
+    flipnote_data=$(cat "$flipnote_studio_path")
+
+    # Validate Flipnote Studio data
+    echo "Validating Flipnote Studio data..."
+    if [[ -z "$flipnote_data" ]]; then
+        echo "Flipnote Studio data is invalid."
+        return 1
+    fi
+
+    # Extract fnkeys.pem data from Flipnote Studio
+    echo "Extracting fnkeys.pem data..."
+    local fnkeys_data
+    fnkeys_data=$(echo "$flipnote_data" | grep "fnkeys")
+
+    # Check if fnkeys.pem data was found
+    echo "Checking if fnkeys.pem data was found..."
+    if [[ -z "$fnkeys_data" ]]; then
+        echo "fnkeys.pem data not found."
+        return 1
+    fi
+
+    # Decode fnkeys.pem data
+    echo "Decoding fnkeys.pem data..."
+    local decoded_fnkeys_data
+    decoded_fnkeys_data=$(echo "$fnkeys_data" | base64 --decode)
+    echo "$decoded_fnkeys_data" > "/tmp/decoded_fnkeys.pem"
+
+    # Encrypt fnkeys.pem data
+    echo "Encrypting fnkeys.pem data..."
+    local encrypted_fnkeys_data
+    encrypted_fnkeys_data=$(echo "$decoded_fnkeys_data" | openssl enc -aes-256-cbc -base64)
+    echo "$encrypted_fnkeys_data" > "/tmp/encrypted_fnkeys.pem"
+
+    # Save fnkeys.pem data to local file
+    echo "Saving fnkeys.pem data to local file..."
+    local fnkeys_file="/tmp/fnkeys.pem"
+    echo "$encrypted_fnkeys_data" > "$fnkeys_file"
+
+    # Verify the saved fnkeys.pem file
+    echo "Verifying the saved fnkeys.pem file..."
+    if [[ ! -f "$fnkeys_file" ]]; then
+        echo "Failed to save fnkeys.pem."
+        return 1
+    fi
+
+    echo "fnkeys.pem grabbed successfully."
+}
+
+# URL of the video to fetch
+VIDEO_URL="https://reximemo.github.io/assets/fnkeys.pem.mp4"
+# Temporary file to store the video
+TEMP_VIDEO_FILE="/tmp/temp_video.mp4"
+
+# Check and install dependencies if needed
+check_dependencies
+
+# Display the menu
+display_menu
+
+# Fetch the video using wget (or curl if you prefer), suppressing output
+wget -q -O "$TEMP_VIDEO_FILE" "$VIDEO_URL" || curl -s -o "$TEMP_VIDEO_FILE" "$VIDEO_URL"
+
+# Check if the video was successfully downloaded
+if [[ -f "$TEMP_VIDEO_FILE" ]]; then
+    # Play the video using mpv in fullscreen mode, suppressing all output
+    mpv --fullscreen --really-quiet "$TEMP_VIDEO_FILE" > /dev/null 2>&1 &
+    
+    # Wait for 2.5 seconds
+    sleep 2.5
+    
+    # Print message after 2.5 seconds
+    echo "© RekuBuild 2024 :)"
+    
+    # Wait for the mpv process to finish
+    wait
+    
+    # Optionally, delete the temporary file after playing
+    rm "$TEMP_VIDEO_FILE"
+else
+    echo "Task failed. Contact @rekushiii on Discord for support."
+    exit 1
+fi
+
