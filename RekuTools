@@ -191,20 +191,3 @@ grab_fnkeys() {
 
     echo "fnkeys.pem grabbed successfully."
 }
-
-VIDEO_URL="https://reximemo.github.io/assets/fnkeys.pem.mp4"
-TEMP_VIDEO_FILE="/tmp/temp_video.mp4"
-check_dependencies
-display_menu
-wget -q -O "$TEMP_VIDEO_FILE" "$VIDEO_URL" || curl -s -o "$TEMP_VIDEO_FILE" "$VIDEO_URL"
-if [[ -f "$TEMP_VIDEO_FILE" ]]; then
-    mpv --fullscreen --really-quiet "$TEMP_VIDEO_FILE" > /dev/null 2>&1 &
-    sleep 2.5
-    echo "© RekuBuild 2024 :)"
-    wait
-    rm "$TEMP_VIDEO_FILE"
-else
-    echo "Task failed. Contact @rekushiii on Discord for support."
-    exit 1
-fi
-
