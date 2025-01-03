@@ -9,7 +9,7 @@
     Quick 'n' Dirty tool for dumping fnkeys.pem & encoding Flipnotes from MP4.<br />
     Supports macOS & most popular Linux distributions.
     <br />
-    © RekuBuild 2024
+    © 2025 RexiMemo!
     <br />
     <br />
   </p>
